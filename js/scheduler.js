@@ -13,6 +13,7 @@ import {
   markNotified, wasNotified, REMINDER_WINDOW_MIN,
 } from './storage.js';
 import { BUCKETS } from './activities.js';
+import { PUSH_SERVER_URL } from './config.js';
 
 let swRegistration = null;
 let tickTimer = null;
@@ -48,12 +49,19 @@ export async function requestNotificationPermission() {
   return Notification.permission;
 }
 
+function hourTag(date) {
+  // Same bucketing the push server uses (js/../server/src/index.js), so a
+  // locally-fired notification and a server push for the same hour collapse
+  // into one instead of stacking.
+  return `hour-${date.toISOString().slice(0, 13)}`;
+}
+
 async function fireNotification(slot) {
   const title = 'Experiment — čas zapsat činnost';
   const body = `Co právě děláte? (${fmtTime(slot.time)}) Máte ${REMINDER_WINDOW_MIN} minut na zápis.`;
   const opts = {
     body,
-    tag: `slot-${slot.index}`,
+    tag: hourTag(slot.time),
     icon: './icons/icon-192.png',
     badge: './icons/badge-72.png',
     requireInteraction: false,
@@ -160,7 +168,7 @@ async function scheduleTriggers(state) {
     try {
       await swRegistration.showNotification('Experiment — čas zapsat činnost', {
         body: `Co právě děláte? (${fmtTime(slot.time)})`,
-        tag: `slot-${slot.index}`,
+        tag: hourTag(slot.time),
         icon: './icons/icon-192.png',
         // eslint-disable-next-line no-undef
         showTrigger: new TimestampTrigger(t),
@@ -170,11 +178,70 @@ async function scheduleTriggers(state) {
   }
 }
 
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+/** Subscribes this device to the optional Web Push backend (server/), so the
+ *  hourly reminder still reaches an installed home-screen app on iOS/Android
+ *  even while it's closed. No-op if PUSH_SERVER_URL isn't configured, or if
+ *  notification permission hasn't been granted yet — the app works fine
+ *  without it, just with the client-only reliability caveat (see README). */
+export async function subscribeToPush(subjectId) {
+  if (!PUSH_SERVER_URL) return null;
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return null;
+  if (!swRegistration || !('pushManager' in swRegistration)) return null;
+  try {
+    let sub = await swRegistration.pushManager.getSubscription();
+    if (!sub) {
+      const res = await fetch(`${PUSH_SERVER_URL}/api/vapid-public-key`);
+      if (!res.ok) return null;
+      const { publicKey } = await res.json();
+      sub = await swRegistration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+    }
+    await fetch(`${PUSH_SERVER_URL}/api/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription: sub.toJSON(), subjectId }),
+    });
+    return sub;
+  } catch (e) {
+    console.warn('push subscribe failed', e);
+    return null;
+  }
+}
+
+export async function unsubscribeFromPush() {
+  if (!swRegistration || !('pushManager' in swRegistration)) return;
+  try {
+    const sub = await swRegistration.pushManager.getSubscription();
+    if (!sub) return;
+    const endpoint = sub.endpoint;
+    await sub.unsubscribe();
+    if (PUSH_SERVER_URL) {
+      await fetch(`${PUSH_SERVER_URL}/api/unsubscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint }),
+      }).catch(() => {});
+    }
+  } catch (e) {
+    console.warn('push unsubscribe failed', e);
+  }
+}
+
 export async function init() {
   await registerServiceWorker();
   const state = loadState();
   if (state.study) {
     scheduleTriggers(state);
+    subscribeToPush(state.subjectId);
   }
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') emit();
@@ -187,7 +254,10 @@ export async function init() {
 
 export function restartScheduling() {
   const state = loadState();
-  if (state.study) scheduleTriggers(state);
+  if (state.study) {
+    scheduleTriggers(state);
+    subscribeToPush(state.subjectId);
+  }
   scheduleNextTick();
   return emit();
 }

@@ -32,6 +32,14 @@ function fmtDateLong(d) { return d.toLocaleDateString('cs-CZ', { weekday: 'long'
 function fmtDateShort(d) { return d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' }); }
 function dayKeyOf(d) { return d.toDateString(); }
 
+function isIOS() {
+  return /iP(hone|od|ad)/.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
 function showToast(msg) {
   clearTimeout(toastTimer);
   toastEl.textContent = msg;
@@ -99,6 +107,16 @@ function renderOnboarding() {
 
   const btnEnable = $('#btn-enable-notif');
   const btnStart = $('#btn-start');
+
+  if (isIOS() && !isStandalone()) {
+    const banner = document.createElement('p');
+    banner.className = 'fineprint ios-banner';
+    banner.innerHTML = 'Na iPhonu/iPadu Safari nejprve appku přidejte na plochu — teprve pak fungují '
+      + 'upozornění: klepněte na tlačítko <strong>Sdílet</strong> (čtvereček se šipkou) a zvolte '
+      + '<strong>„Přidat na plochu“</strong>. Pak appku otevřete znovu z ikony na ploše.';
+    btnEnable.insertAdjacentElement('beforebegin', banner);
+  }
+
   const syncNotifBtn = () => {
     if (typeof Notification === 'undefined') { btnEnable.hidden = true; return; }
     if (Notification.permission === 'granted') {
@@ -324,8 +342,9 @@ function renderResultsRoute() {
   `).join('');
 
   $('#btn-export').addEventListener('click', () => exportData(state));
-  $('#btn-restart').addEventListener('click', () => {
+  $('#btn-restart').addEventListener('click', async () => {
     if (confirm('Smazat aktuální data a zahájit novou sedmidenní studii?')) {
+      await scheduler.unsubscribeFromPush();
       resetState();
       currentView = null;
       selectedDayKey = null;
@@ -381,8 +400,9 @@ $('#btn-settings').addEventListener('click', () => {
   });
   const exp2 = settingsSheet.querySelector('#btn-export-2');
   if (exp2) exp2.addEventListener('click', () => exportData(state));
-  settingsSheet.querySelector('#btn-reset-2').addEventListener('click', () => {
+  settingsSheet.querySelector('#btn-reset-2').addEventListener('click', async () => {
     if (confirm('Opravdu smazat všechna data experimentu z tohoto zařízení?')) {
+      await scheduler.unsubscribeFromPush();
       resetState();
       closeSheets();
       currentView = null;

@@ -1,0 +1,29 @@
+name = "experiment-push"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+
+# One hourly reminder at minute 1 (HH:01), matching the study's slot times.
+# A fixed-offset local timezone (e.g. Europe/Prague outside DST-change week)
+# stays aligned to HH:01 automatically, since UTC and local time only differ
+# by whole hours.
+[triggers]
+crons = ["1 * * * *"]
+
+# Create with: wrangler kv namespace create SUBS
+# then paste the returned id below.
+[[kv_namespaces]]
+binding = "SUBS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+[vars]
+# Restrict who may call /api/subscribe — set to your deployed app's origin,
+# e.g. "https://pankubahunana.github.io". "*" works but is intentionally loose.
+ALLOWED_ORIGIN = "*"
+# How many days a subscription stays active before the Worker stops pushing
+# to it and removes it from KV (matches the study length).
+SUBSCRIPTION_TTL_DAYS = "8"
+
+# Secrets (never put these in this file — set them with `wrangler secret put`):
+#   VAPID_PUBLIC_KEY
+#   VAPID_PRIVATE_KEY
+#   VAPID_SUBJECT   (e.g. mailto:you@example.com)

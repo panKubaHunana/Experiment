@@ -133,6 +133,11 @@ button { font: inherit; }
 .steps li { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-m); padding: 12px 14px; box-shadow: var(--shadow-1); }
 .step-num { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--brand-grad); color: #fff; font-weight: 700; font-size: 13px; display: grid; place-items: center; }
 .fineprint { color: var(--text-3); font-size: 12.5px; margin: 14px 0 4px; }
+.ios-banner {
+  text-align: left; color: var(--text-2); font-size: 13px; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: var(--radius-m); padding: 12px 14px; margin: 18px 0 4px;
+}
+.ios-banner strong { color: var(--text); }
 
 /* ---------- Progress card ---------- */
 .progress-card {

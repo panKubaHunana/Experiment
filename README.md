@@ -24,8 +24,11 @@ grafy a přepočtem na rok a deset let.
   sloupcový graf a časová mřížka 7×24 h. Extrapolace týdenního průměru na
   **1 rok** a **10 let** v hodinách i dnech.
 - **Data zůstávají na zařízení.** Vše se ukládá pouze do `localStorage`
-  prohlížeče — žádný server, žádný účet, žádný upload. Data lze kdykoli
-  exportovat jako JSON tlačítkem „Export dat“.
+  prohlížeče — žádný účet, žádný upload deníku. Data lze kdykoli exportovat
+  jako JSON tlačítkem „Export dat“. Jediná volitelná výjimka je popsaná níže
+  v sekci o notifikacích: pokud nasadíte `server/`, appka na něj pošle jen
+  technickou push-subscription (ne obsah zápisů), aby vám mohl posílat
+  hodinová upozornění.
 
 ### Mapování aktivit → kategorie
 
@@ -64,24 +67,35 @@ GitHub Pages (viz níže) nebo tunel typu `ngrok`.
 3. Subjekt si stránku otevře v mobilním prohlížeči a přes nabídku
    „Přidat na plochu“ / „Nainstalovat“ si ji uloží jako PWA.
 
-## Spolehlivost notifikací — důležité omezení
+## Spolehlivost notifikací (a iOS)
 
-Aplikace **nemá backend ani push server** — notifikace generuje přímo
-stránka/service worker přes `Notification.showNotification()`, dokud je
-aplikace (nebo její service worker) aktivní. To znamená:
+Appka funguje ve dvou režimech:
 
-- Pokud je PWA nainstalovaná a telefon ji nedostane agresivně uspat na
-  pozadí, hodinové notifikace i automatické doplnění „Bez reakce“ fungují
-  spolehlivě po celý týden.
-- Na Androidu doporučte subjektu v nastavení baterie povolit aplikaci
-  neomezený běh na pozadí („Unrestricted battery usage“), jinak může OS
-  service worker mezi hodinami ukončit.
-- Při každém otevření aplikace se stav okamžitě přepočítá (dohledají se
-  zmeškané hodiny a doplní se „Bez reakce“ se správným původním časem), takže
-  data nikdy nejsou nekonzistentní — i kdyby notifikace nedorazila.
-- Pro produkční nasazení na více subjektů s garantovaným doručením i při
-  zavřené aplikaci by bylo potřeba doplnit Web Push server (VAPID) — mimo
-  rozsah této čistě klientské aplikace.
+**A) Bez serveru (výchozí, `js/config.js` → `PUSH_SERVER_URL = ''`).**
+Notifikace generuje přímo stránka/service worker, dokud je aplikace (nebo
+její service worker) aktivní.
+- Na **Androidu/desktopu** to při nainstalované PWA a povoleném běhu na
+  pozadí funguje spolehlivě celý týden (v nastavení baterie doporučte
+  subjektu „Unrestricted battery usage“).
+- Na **iOS/iPadOS (Safari)** notifikace fungují *jen* po přidání appky na
+  plochu (Sdílet → Přidat na plochu, appka na to sama upozorní) — a i pak
+  je spolehlivě dostane, jen dokud appku nezavře/telefon neuspí, protože
+  Safari na pozadí JS stránky i service workeru rychle uspává. Appka to
+  dožene při každém otevření (dohledá zmeškané hodiny a doplní „Bez
+  reakce“ se správným původním časem), takže data nikdy nechybí — ale
+  notifikace samotná v tu chvíli už nedorazí.
+
+**B) Se serverem (`server/`, volitelné).** Malý Cloudflare Worker posílá
+skutečný Web Push (RFC 8291 `aes128gcm`, jediné kódování, které iOS 16.4+
+podporuje) každou hodinu i zavřené appce na ploše — i na iOS. Appka se k
+němu automaticky přihlásí, jakmile v `js/config.js` vyplníte
+`PUSH_SERVER_URL`. Návod k nasazení: [`server/README.md`](server/README.md).
+Bez vyplnění `PUSH_SERVER_URL` appka běží přesně v režimu A, žádné jiné
+chování se nezmění.
+
+V obou režimech: při každém otevření appky se stav okamžitě přepočítá, takže
+i bez jediné doručené notifikace zůstanou data konzistentní — jen se o
+zmeškané hodině subjekt dozví později, ne v reálném čase.
 
 ## Struktura projektu
 
@@ -89,16 +103,19 @@ aplikace (nebo její service worker) aktivní. To znamená:
 index.html              hlavní shell + šablony obrazovek
 css/style.css            design systém (světlý/tmavý režim)
 js/storage.js            datová vrstva (localStorage), plán hodinových slotů
-js/scheduler.js          notifikace, auto-doplnění „Bez reakce“
+js/scheduler.js          notifikace, push subscription, auto-doplnění „Bez reakce“
+js/config.js             PUSH_SERVER_URL (prázdné = bez serveru, viz výše)
 js/activities.js         katalog aktivit a kategorií
 js/icons.js              sada vlastních ikon (inline SVG)
 js/stats.js              agregace a přepočet na rok/10 let
 js/charts.js             vlastní SVG grafy (bez závislosti na knihovně)
 js/app.js                UI a routování obrazovek
-sw.js                     service worker (offline cache + klik na notifikaci)
+sw.js                     service worker (offline cache, klik na notifikaci, Web Push)
 manifest.webmanifest      PWA manifest
 icons/                    zdrojová SVG + vygenerované PNG ikony
 tools/gen-icons.mjs       skript pro přegenerování PNG ikon z SVG (Playwright)
+server/                   volitelný Cloudflare Worker pro spolehlivé notifikace na iOS
+                          (VAPID Web Push) — viz server/README.md
 ```
 
 ### Přegenerování ikon
