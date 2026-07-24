@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4c1fa8"/>
+      <stop offset="55%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#b565f5"/>
+    </linearGradient>
+    <linearGradient id="arc" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffd166"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- clock face -->
+  <circle cx="256" cy="266" r="146" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="14"/>
+
+  <!-- progress arc: ~68% of the day tracked -->
+  <path d="M 256 120 A 146 146 0 1 1 129.4 336.6" fill="none" stroke="url(#arc)" stroke-width="14" stroke-linecap="round"/>
+
+  <!-- major ticks: 12 / 3 / 6 / 9 -->
+  <g stroke="#ffffff" stroke-linecap="round">
+    <line x1="256" y1="128" x2="256" y2="150" stroke-width="10"/>
+    <line x1="392" y1="266" x2="370" y2="266" stroke-width="10"/>
+    <line x1="256" y1="404" x2="256" y2="382" stroke-width="10"/>
+    <line x1="120" y1="266" x2="142" y2="266" stroke-width="10"/>
+  </g>
+  <!-- minor ticks -->
+  <g stroke="rgba(255,255,255,0.55)" stroke-linecap="round" stroke-width="6">
+    <line x1="256" y1="134" x2="256" y2="146" transform="rotate(30 256 266)"/>
+    <line x1="256" y1="134" x2="256" y2="146" transform="rotate(60 256 266)"/>
+    <line x1="256" y1="134" x2="256" y2="146" transform="rotate(120 256 266)"/>
+    <line x1="256" y1="134" x2="256" y2="146" transform="rotate(150 256 266)"/>
+    <line x1="256" y1="134" x2="256" y2="146" transform="rotate(210 256 266)"/>
+    <line x1="256" y1="134" x2="256" y2="146" transform="rotate(240 256 266)"/>
+    <line x1="256" y1="134" x2="256" y2="146" transform="rotate(300 256 266)"/>
+    <line x1="256" y1="134" x2="256" y2="146" transform="rotate(330 256 266)"/>
+  </g>
+
+  <!-- hands -->
+  <line x1="256" y1="266" x2="256" y2="188" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/>
+  <line x1="256" y1="266" x2="308" y2="266" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="256" cy="266" r="12" fill="#ffd166"/>
+
+  <!-- calendar tick row (small, bottom) -->
+  <g fill="rgba(255,255,255,0.85)">
+    <circle cx="216" cy="400" r="7"/>
+    <circle cx="256" cy="400" r="7"/>
+    <circle cx="296" cy="400" r="7"/>
+  </g>
+</svg>

@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Experiment — deník denního času</title>
+<meta name="description" content="Sociologický experiment: týdenní deník využití denního času, hodinové zápisy a vyhodnocení.">
+<meta name="theme-color" content="#2b1f63" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d0a1c" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="./icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+
+<div id="app" class="app">
+
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">Experiment</span>
+    </div>
+    <button id="btn-settings" class="icon-btn" aria-label="Nastavení" title="Nastavení"></button>
+  </header>
+
+  <main id="main" class="main"></main>
+
+  <nav id="tabbar" class="tabbar" hidden>
+    <button class="tab-btn" data-view="log" aria-label="Deník"></button>
+    <button class="tab-btn" data-view="results" aria-label="Vyhodnocení"></button>
+  </nav>
+
+</div>
+
+<div id="sheet-backdrop" class="sheet-backdrop" hidden></div>
+<div id="entry-sheet" class="sheet" hidden></div>
+<div id="settings-sheet" class="sheet" hidden></div>
+<div id="toast" class="toast" hidden></div>
+
+<template id="tpl-onboarding">
+  <section class="screen onboarding">
+    <div class="onboarding-hero" aria-hidden="true">
+      <svg viewBox="0 0 120 120" class="hero-mark">
+        <circle cx="60" cy="60" r="54" class="hero-ring"/>
+        <g class="hero-ticks"></g>
+        <circle cx="60" cy="60" r="5" class="hero-dot"/>
+      </svg>
+    </div>
+    <h1>Experiment</h1>
+    <p class="lead">Sociologická studie využití denního času. Po dobu <strong>7 dní</strong> zaznamenáváte, čemu se
+      právě věnujete — jednou za hodinu, v jednoduchém zápisu na pár vteřin.</p>
+
+    <ol class="steps">
+      <li><span class="step-num">1</span><div><strong>Upozornění každou hodinu.</strong> V čase HH:01 přijde notifikace.</div></li>
+      <li><span class="step-num">2</span><div><strong>15 minut na zápis.</strong> Vyberte činnost z nabídky nebo napište vlastní.</div></li>
+      <li><span class="step-num">3</span><div><strong>Bez reakce = doplněno automaticky.</strong> Když nestihnete, systém řádek označí sám, ať data nechybí.</div></li>
+      <li><span class="step-num">4</span><div><strong>Zápisy jsou skryté.</strong> Své předchozí odpovědi neuvidíte — výsledek tak nic neovlivní.</div></li>
+    </ol>
+
+    <p class="fineprint">Všechna data zůstávají pouze v tomto zařízení (localStorage) a nikam se neodesílají. Po
+      dokončení týdne si zobrazíte souhrn a statistiky.</p>
+
+    <button id="btn-enable-notif" class="btn btn-secondary">Povolit oznámení</button>
+    <button id="btn-start" class="btn btn-primary">Zahájit experiment</button>
+  </section>
+</template>
+
+<template id="tpl-log">
+  <section class="screen log">
+    <div class="progress-card">
+      <div class="progress-ring-wrap">
+        <svg viewBox="0 0 64 64" class="progress-ring">
+          <circle cx="32" cy="32" r="27" class="ring-track"/>
+          <circle cx="32" cy="32" r="27" class="ring-value" id="ring-value"/>
+        </svg>
+        <div class="progress-ring-label"><span id="progress-count">0</span><small>hodin</small></div>
+      </div>
+      <div class="progress-meta">
+        <div class="progress-title" id="progress-title">Den 1 / 7</div>
+        <div class="progress-sub" id="progress-sub">Další připomenutí v —</div>
+      </div>
+    </div>
+
+    <div class="day-strip" id="day-strip" role="tablist" aria-label="Dny experimentu"></div>
+
+    <div class="agenda" id="agenda"></div>
+  </section>
+</template>
+
+<template id="tpl-locked-results">
+  <section class="screen locked">
+    <div class="lock-icon" aria-hidden="true"></div>
+    <h2>Vyhodnocení se odemkne po týdnu</h2>
+    <p>Statistiky a grafy uvidíte, jakmile bude dokončen celý sedmidenní sběr dat — aby vás předběžné výsledky
+      neovlivnily. Aktuální průběh: <strong id="locked-progress">0 %</strong>.</p>
+  </section>
+</template>
+
+<template id="tpl-results">
+  <section class="screen results">
+    <h1>Vyhodnocení týdne</h1>
+    <p class="lead" id="results-range"></p>
+
+    <div class="stat-tiles" id="stat-tiles"></div>
+
+    <h2>Přehled kategorií</h2>
+    <div class="card">
+      <table class="data-table" id="summary-table">
+        <thead><tr><th>Kategorie</th><th>Hodiny</th><th>Podíl</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <h2>Podíl kategorií za týden</h2>
+    <div class="card chart-card" id="chart-donut"></div>
+
+    <h2>Hodiny podle kategorie</h2>
+    <div class="card chart-card" id="chart-bar"></div>
+
+    <h2>Časová mřížka celého týdne</h2>
+    <div class="card chart-card chart-card-wide" id="chart-heatmap"></div>
+
+    <h2>Přepočet na delší období</h2>
+    <p class="fineprint">Extrapolace týdenního průměru na rok a deset let — orientační odhad za předpokladu
+      stejného rytmu dne po celé období.</p>
+    <div class="card">
+      <table class="data-table" id="projection-table">
+        <thead><tr><th>Kategorie</th><th>Týden</th><th>Rok</th><th>10 let</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="results-actions">
+      <button id="btn-export" class="btn btn-secondary">Export dat (JSON)</button>
+      <button id="btn-restart" class="btn btn-ghost">Nová studie…</button>
+    </div>
+  </section>
+</template>
+
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>
