@@ -13,7 +13,7 @@ crons = ["1 * * * *"]
 # then paste the returned id below.
 [[kv_namespaces]]
 binding = "SUBS"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "3a4bfe181c4243bdaad32cbb06994a44"
 
 [vars]
 # Restrict who may call /api/subscribe — set to your deployed app's origin,

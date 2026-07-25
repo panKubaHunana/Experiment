@@ -6,9 +6,9 @@
 //
 // This is a classic (non-module) service worker, so it can't `import` from
 // js/config.js — keep this in sync with that file by hand.
-const PUSH_SERVER_URL = '';
+const PUSH_SERVER_URL = 'https://experiment-push.pankubahunana-experiment.workers.dev';
 
-const CACHE = 'experiment-v2';
+const CACHE = 'experiment-v3';
 const SHELL = [
   './',
   './index.html',
